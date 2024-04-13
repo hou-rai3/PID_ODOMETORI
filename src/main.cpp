@@ -52,7 +52,7 @@ void Omni(float Omni_x_PID, float Omni_y_PID, float Omni_theta_PID, int16_t pwm[
 {
     float r = hypot(Omni_x_PID, Omni_y_PID);
     float theta_2 = atan2(Omni_y_PID, Omni_x_PID);
-    //                                          |< + piteh(姿勢角)
+  
     int pwm_power0 = r * 8000 * cos(theta_2 + (45 * M_PI / 180)) + Omni_theta_PID * 2000;
     int pwm_power3 = r * 8000 * cos(theta_2 - (45 * M_PI / 180)) + Omni_theta_PID * 2000;
     int pwm_power2 = r * 8000 * cos(theta_2 - (125 * M_PI / 180)) + Omni_theta_PID * 2000;
@@ -63,10 +63,7 @@ void Omni(float Omni_x_PID, float Omni_y_PID, float Omni_theta_PID, int16_t pwm[
     pwm[3] = std::clamp(pwm_power3, -8000, 8000);
     pwm[2] = std::clamp(pwm_power2, -8000, 8000);
     pwm[1] = std::clamp(pwm_power1, -8000, 8000);
-    // printf("pwm: pwm[0] = % 4.2f , pwm [1] = % 4.2f , pwm[2] = % 4.2f , pwm[3] = % 4.2f\n",
-    //    static_cast<float>(pwm[0]), static_cast<float>(pwm[1]), static_cast<float>(pwm[2]), static_cast<float>(pwm[3]));
 }
-
 int main()
 {
     // 初期化
@@ -82,8 +79,8 @@ int main()
 
     while (1)
     {
-        // auto now = HighResClock::now();
-        // static auto pre = now;
+        auto now = HighResClock::now();
+        static auto pre = now;
 
         if (can.read(msg) && msg.id == 48)
             for (int i = 0; i < 4; i += 1)
@@ -91,9 +88,6 @@ int main()
                 signed short data_value = (msg.data[2 * i + 1] << 8) | msg.data[2 * i];
                 count_hozon[i] += data_value;
             }
-        // printf("count%d\n", count_hozon[0]);
-        // if (!can.read(msg))
-        //     printf("can'tCAN\n");
 
         // オドメトリ計算
         Odometry(x_mtere, y_mtere, theta);
@@ -102,21 +96,20 @@ int main()
         float Omni_x_PID = pid_controller.calculate(target_x, x_mtere); // オムニの速度を出す
         float Omni_y_PID = pid_controller.calculate(target_y, y_mtere);
         float Omni_theta_PID = pid_controller.calculate(target_theta, theta);
-        // printf(" theta = %4.2f\n", Omni_theta_PID); // PID計算結果
-
+     
         // オムニ
         Omni(Omni_x_PID, Omni_y_PID, Omni_theta_PID, pwm);
 
         CANMessage msg(1, (const uint8_t *)pwm, 8);
         can.write(msg);
 
-        // if (now - pre > 50ms)
-        //{
-        //
-        //  printf("output : x = % 4.2f, y = %4.2f , theta = %4.2f\n", Omni_x_PID, Omni_y_PID, Omni_theta_PID);                      // PID計算結果
-        //  printf("pwm: pwm[0] = % 4.2d , pwm [1] = % 4.2d , pwm[2] = % 4.2d , pwm[3] = % 4.2d\n", pwm[0], pwm[1], pwm[2], pwm[3]); // pwmの値
-        //  printf("pwm: pwm[0] = % 4.2f , pwm [1] = % 4.2f , pwm[2] = % 4.2f , pwm[3] = % 4.2f\n", static_cast<float>(pwm[0]), static_cast<float>(pwm[1]), static_cast<float>(pwm[2]), static_cast<float>(pwm[3]));
-        // pre = now;
-        // }
+         if (now - pre > 50ms)
+         {
+        
+          printf("output : x = % 4.2f, y = %4.2f , theta = %4.2f\n", Omni_x_PID, Omni_y_PID, Omni_theta_PID);                      // PID計算結果
+          printf("pwm: pwm[0] = % 4.2d , pwm [1] = % 4.2d , pwm[2] = % 4.2d , pwm[3] = % 4.2d\n", pwm[0], pwm[1], pwm[2], pwm[3]); // pwmの値
+          printf("pwm: pwm[0] = % 4.2f , pwm [1] = % 4.2f , pwm[2] = % 4.2f , pwm[3] = % 4.2f\n", static_cast<float>(pwm[0]), static_cast<float>(pwm[1]), static_cast<float>(pwm[2]), static_cast<float>(pwm[3]));
+         pre = now;
+       }
     }
 }
